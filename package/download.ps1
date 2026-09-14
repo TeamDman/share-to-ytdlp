@@ -22,7 +22,7 @@ function Wait-BeforeExit {
     }
 
     Write-Host
-    Write-Host 'Press any key to close.' -ForegroundColor DarkGray
+    Write-Host 'Finished. Press any key to close this window.' -ForegroundColor Cyan
     try {
         $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
     }
