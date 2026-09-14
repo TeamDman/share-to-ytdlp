@@ -1,0 +1,7 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\download]
+@="Download clipboard here"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\download\command]
+@="pwsh -NoProfile -ExecutionPolicy Bypass -c \"$u = ([string](Get-Clipboard -Raw)).Trim(); yt-dlp --windows-filenames --no-playlist --write-info-json --embed-metadata -- $u; $media = $LASTEXITCODE; if ($media -eq 0) { Write-Host ''; Write-Host 'Media download completed. Trying subtitles separately...' -ForegroundColor Green; yt-dlp --windows-filenames --no-playlist --skip-download --write-subs --write-auto-subs -- $u; if ($LASTEXITCODE -ne 0) { Write-Host 'Video is safe; the optional subtitle pass failed.' -ForegroundColor Yellow }; Write-Host 'Done. Press any key to close.' -ForegroundColor Green } else { Write-Host ('Media download failed (yt-dlp exit code {0}). Press any key to close.' -f $media) -ForegroundColor Red }; $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')\""
