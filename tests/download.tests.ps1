@@ -44,3 +44,5 @@ finally {
     $env:PATH = $originalPath
     Remove-Item Env:FAKE_YTDLP_LOG,Env:FAKE_YTDLP_MEDIA_EXIT,Env:FAKE_YTDLP_SUBTITLE_EXIT -ErrorAction SilentlyContinue
 }
+
+exit 0

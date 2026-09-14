@@ -3,31 +3,22 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $projectDirectory = $PSScriptRoot
-$vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-if (-not (Test-Path -LiteralPath $vswhere)) {
-    throw 'Visual Studio Installer (vswhere.exe) was not found. Install Visual Studio 2022 with the Desktop development with C++ workload.'
-}
 
-$visualStudioDirectory = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath | Select-Object -First 1
-if (-not $visualStudioDirectory) {
-    throw 'Visual Studio 2022 C++ build tools were not found. Install the Desktop development with C++ workload.'
-}
-
-$msbuild = Join-Path $visualStudioDirectory 'MSBuild\Current\Bin\MSBuild.exe'
-
-if (-not (Test-Path -LiteralPath $msbuild)) {
-    throw "MSBuild was not found at $msbuild"
-}
-
-& $msbuild (Join-Path $projectDirectory 'ShareToYtDlp.vcxproj') /nologo /m /p:Configuration=Release /p:Platform=x64
+$cargo = Get-Command cargo -CommandType Application -ErrorAction Stop | Select-Object -First 1
+& $cargo.Source build --release --locked --bins
 if ($LASTEXITCODE -ne 0) {
-    throw "MSBuild failed with exit code $LASTEXITCODE"
+    throw "Cargo build failed with exit code $LASTEXITCODE"
+}
+
+$shareTargetExecutable = Join-Path $projectDirectory 'target\release\share-to-ytdlp-share-target.exe'
+if (-not (Test-Path -LiteralPath $shareTargetExecutable -PathType Leaf)) {
+    throw "Share-target executable was not produced at $shareTargetExecutable"
 }
 
 $packageDirectory = Join-Path $projectDirectory 'package'
 $assetDirectory = Join-Path $packageDirectory 'Assets'
 $null = New-Item -ItemType Directory -Path $assetDirectory -Force
-Copy-Item -LiteralPath (Join-Path $projectDirectory 'bin\x64\Release\ShareToYtDlp.exe') -Destination $packageDirectory -Force
+Copy-Item -LiteralPath $shareTargetExecutable -Destination (Join-Path $packageDirectory 'ShareToYtDlp.exe') -Force
 
 Add-Type -AssemblyName System.Drawing
 function New-Logo([string] $Path, [int] $Size) {
@@ -74,4 +65,5 @@ New-Logo (Join-Path $assetDirectory 'StoreLogo.png') 50
 New-Logo (Join-Path $assetDirectory 'Square44x44Logo.png') 44
 New-Logo (Join-Path $assetDirectory 'Square150x150Logo.png') 150
 
-Write-Host "Package layout built at $packageDirectory"
+Write-Host "Rust package layout built at $packageDirectory"
+Write-Host "CLI executable: $(Join-Path $projectDirectory 'target\release\share-to-ytdlp.exe')"

@@ -1,3 +1,5 @@
+/target/
+/tracy/
 /bin/
 /obj/
 /package/Assets/
@@ -5,3 +7,4 @@
 /package/microsoft.system.package.metadata/
 /tests/output/
 /tests/yt-dlp-invocations.log
+*.tracy

@@ -1,16 +1,28 @@
 # Download with yt-dlp — Windows Share target
 
-A small native Windows app that adds **Download with yt-dlp** to the Windows Share dialog for shared web links and text. It opens a visible PowerShell window and saves media in the Windows Downloads known folder.
+A native Windows Share target and companion Rust CLI that download shared web links with [yt-dlp](https://github.com/yt-dlp/yt-dlp). The Share target opens a visible PowerShell window and saves media in the Windows Downloads known folder.
 
 Media and subtitles are downloaded in separate passes. Missing or broken subtitle tracks therefore cannot turn a successful media download into a failure.
+
+## How activation works
+
+Windows does not pass a shared link as an ordinary command-line argument. The packaged GUI executable reads `AppInstance::GetActivatedEventArgs`, casts a `ShareTarget` activation to `ShareTargetActivatedEventArgs`, and retrieves the `DataPackageView` as `WebLink`, legacy `Uri`, or text.
+
+The project deliberately builds two executables from one Rust library:
+
+- `share-to-ytdlp-share-target.exe` is a windowless GUI-subsystem executable registered in `AppxManifest.xml`. `build.ps1` copies it into the loose package as `ShareToYtDlp.exe`.
+- `share-to-ytdlp.exe` is a normal console CLI with `--help`, `--version`, and `download <URL>`.
+
+Both paths launch the same `package/download.ps1` implementation. The Appx manifest controls Share registration and its displayed PNG assets; `resources/app.rc` embeds the conventional Win32 manifest and version metadata into the Rust executables.
 
 ## Requirements
 
 - Windows 10 version 2004 or newer, or Windows 11
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) available on `PATH`
-- PowerShell 7 (`pwsh`) available on `PATH`
+- PowerShell 7 (`pwsh`) available on `PATH`; Windows PowerShell is used as a fallback
 - FFmpeg available to yt-dlp for merging and metadata embedding
-- Visual Studio 2022 with **Desktop development with C++** and a Windows 10/11 SDK
+- A current Rust MSVC toolchain
+- Visual Studio Build Tools and a Windows SDK for the MSVC linker and resource compiler
 - Developer Mode enabled in Windows settings
 
 ## Install
@@ -21,7 +33,7 @@ Clone the repository, then run from PowerShell:
 .\install.ps1
 ```
 
-The installer builds the native executable and registers its package manifest locally. The Share target is a development-mode loose package, so keep the cloned directory in place after installation.
+The installer builds the Rust executables and registers the package manifest locally. The Share target is a development-mode loose package, so keep the cloned directory in place after installation.
 
 Close and reopen an existing Share panel after installation. **Download with yt-dlp** may initially appear at the bottom of the **Share using** list.
 
@@ -32,6 +44,14 @@ From an app or website that uses the native Windows Share dialog:
 1. Share a link.
 2. Choose **Download with yt-dlp**.
 3. Follow progress in the PowerShell window.
+
+The console interface exposes the same downloader:
+
+```powershell
+cargo run -- --help
+cargo run -- --version
+cargo run -- download 'https://x.com/example/status/123'
+```
 
 Downloads go to the Windows Downloads known folder by default.
 
@@ -59,29 +79,29 @@ Both variants use the same two-pass media/subtitle behavior.
 
 ## Build and test
 
-Build the package layout:
+Build the release package layout:
 
 ```powershell
 .\build.ps1
 ```
 
-Run isolated downloader tests. They use a fake yt-dlp executable and make no network requests:
+Run the complete template-derived quality gate:
 
 ```powershell
-.\tests\download.tests.ps1
+.\check-all.ps1
 ```
 
-Test the PowerShell downloader directly:
-
-```powershell
-.\package\download.ps1 -Url 'https://example.com/video' -NoPause
-```
+The downloader tests use a fake yt-dlp executable and make no network requests.
 
 ## Uninstall
 
 ```powershell
 .\uninstall.ps1
 ```
+
+## Previous C++ implementation
+
+The final C++ implementation is preserved by the `cpp-v1.0.1` Git tag.
 
 ## License
 
