@@ -27,7 +27,7 @@ pub struct Cli {
 
     /// The command to run.
     #[facet(args::subcommand)]
-    pub command: Command,
+    pub command: Option<Command>,
 }
 
 impl PartialEq for Cli {
@@ -45,7 +45,12 @@ impl Cli {
             .enable_all()
             .build()
             .wrap_err("failed to build Tokio runtime")?;
-        runtime.block_on(async move { self.command.invoke(cancellation_token).await })
+        runtime.block_on(async move {
+            match self.command {
+                Some(command) => command.invoke(cancellation_token).await,
+                None => Ok(CliOutput::none()),
+            }
+        })
     }
 }
 

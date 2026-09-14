@@ -26,3 +26,17 @@ fn version_output_includes_git_repository_metadata() {
     assert!(stdout.contains(env!("GIT_WORKTREE_STATUS")), "{stdout}");
     assert!(stdout.contains("built "), "{stdout}");
 }
+
+#[test]
+fn no_arguments_is_a_successful_no_op_outside_the_package() {
+    let output = Command::new(env!("CARGO_BIN_EXE_share-to-ytdlp"))
+        .output()
+        .expect("failed to run without arguments");
+
+    assert!(
+        output.status.success(),
+        "no-argument invocation failed: status={:?}, stderr={}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

@@ -9,6 +9,11 @@ use windows::ApplicationModel::AppInstance;
 use windows::ApplicationModel::DataTransfer::DataPackageView;
 use windows::ApplicationModel::DataTransfer::StandardDataFormats;
 use windows::Foundation::Uri;
+use windows::Win32::Foundation::APPMODEL_ERROR_NO_PACKAGE;
+use windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER;
+use windows::Win32::Foundation::ERROR_SUCCESS;
+use windows::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName;
+use windows::Win32::System::Console::FreeConsole;
 use windows::Win32::System::WinRT::RO_INIT_MULTITHREADED;
 use windows::Win32::System::WinRT::RoInitialize;
 use windows::Win32::System::WinRT::RoUninitialize;
@@ -39,25 +44,51 @@ impl Drop for WinRtApartment {
     }
 }
 
-/// Runs the windowless executable registered by the package as a Windows Share target.
+/// Handles a packaged activation when the zero-argument CLI was launched by Windows.
 ///
 /// # Errors
 ///
-/// Returns an error if activation metadata cannot be read or the Share operation cannot be reported.
-pub fn run() -> Result<()> {
+/// Returns an error if package identity or activation metadata cannot be read, or the Share operation cannot be reported.
+pub fn try_handle_activation() -> Result<bool> {
+    if !has_package_identity()? {
+        return Ok(false);
+    }
+
+    // The one executable is a console binary so CLI help/version work normally.
+    // Packaged zero-argument launches are UI activations, so detach the otherwise
+    // unused console before WinRT opens the actual downloader window.
+    // SAFETY: Detaching the current process from its console takes no pointers.
+    let _ = unsafe { FreeConsole() };
+
     let _apartment = WinRtApartment::initialize()?;
     let activated = AppInstance::GetActivatedEventArgs()
         .wrap_err("failed to read the packaged app activation arguments")?;
 
     if activated.Kind()? != ActivationKind::ShareTarget {
         show_instructions();
-        return Ok(());
+        return Ok(true);
     }
 
     let arguments: ShareTargetActivatedEventArgs = activated
         .cast()
         .wrap_err("Share activation arguments had the wrong WinRT type")?;
-    handle_share(&arguments)
+    handle_share(&arguments)?;
+    Ok(true)
+}
+
+fn has_package_identity() -> Result<bool> {
+    let mut length = 0_u32;
+    // SAFETY: The documented sizing call accepts a null output buffer and writes
+    // only the required character count to `length`.
+    let status = unsafe { GetCurrentPackageFullName(&raw mut length, None) };
+    match status {
+        APPMODEL_ERROR_NO_PACKAGE => Ok(false),
+        ERROR_INSUFFICIENT_BUFFER | ERROR_SUCCESS => Ok(true),
+        other => bail!(
+            "GetCurrentPackageFullName failed with Win32 error {}",
+            other.0
+        ),
+    }
 }
 
 fn handle_share(arguments: &ShareTargetActivatedEventArgs) -> Result<()> {
@@ -123,7 +154,7 @@ fn show_instructions() {
     );
 }
 
-/// Shows a fatal startup error from the windowless Share-target executable.
+/// Shows a fatal packaged-activation error.
 pub fn show_fatal_error(error: &str) {
     show_message(error, MB_ICONERROR);
 }
@@ -158,5 +189,10 @@ mod tests {
     fn rejects_non_web_schemes() {
         let _apartment = WinRtApartment::initialize().expect("WinRT should initialize");
         assert!(validate_web_address("file:///C:/video.mp4").is_err());
+    }
+
+    #[test]
+    fn test_process_has_no_package_identity() {
+        assert!(!has_package_identity().expect("package identity check should succeed"));
     }
 }

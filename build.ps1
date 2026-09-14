@@ -5,20 +5,24 @@ $ErrorActionPreference = 'Stop'
 $projectDirectory = $PSScriptRoot
 
 $cargo = Get-Command cargo -CommandType Application -ErrorAction Stop | Select-Object -First 1
-& $cargo.Source build --release --locked --bins
+& $cargo.Source build --release --locked --bin share-to-ytdlp
 if ($LASTEXITCODE -ne 0) {
     throw "Cargo build failed with exit code $LASTEXITCODE"
 }
 
-$shareTargetExecutable = Join-Path $projectDirectory 'target\release\share-to-ytdlp-share-target.exe'
-if (-not (Test-Path -LiteralPath $shareTargetExecutable -PathType Leaf)) {
-    throw "Share-target executable was not produced at $shareTargetExecutable"
+$executable = Join-Path $projectDirectory 'target\release\share-to-ytdlp.exe'
+if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
+    throw "Executable was not produced at $executable"
 }
 
 $packageDirectory = Join-Path $projectDirectory 'package'
 $assetDirectory = Join-Path $packageDirectory 'Assets'
 $null = New-Item -ItemType Directory -Path $assetDirectory -Force
-Copy-Item -LiteralPath $shareTargetExecutable -Destination (Join-Path $packageDirectory 'ShareToYtDlp.exe') -Force
+$legacyExecutable = Join-Path $packageDirectory 'ShareToYtDlp.exe'
+if (Test-Path -LiteralPath $legacyExecutable) {
+    Remove-Item -LiteralPath $legacyExecutable -Force
+}
+Copy-Item -LiteralPath $executable -Destination (Join-Path $packageDirectory 'share-to-ytdlp.exe') -Force
 
 Add-Type -AssemblyName System.Drawing
 function New-Logo([string] $Path, [int] $Size) {
@@ -66,4 +70,4 @@ New-Logo (Join-Path $assetDirectory 'Square44x44Logo.png') 44
 New-Logo (Join-Path $assetDirectory 'Square150x150Logo.png') 150
 
 Write-Host "Rust package layout built at $packageDirectory"
-Write-Host "CLI executable: $(Join-Path $projectDirectory 'target\release\share-to-ytdlp.exe')"
+Write-Host "Executable: $executable"

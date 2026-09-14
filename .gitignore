@@ -3,7 +3,7 @@
 /bin/
 /obj/
 /package/Assets/
-/package/ShareToYtDlp.exe
+/package/share-to-ytdlp.exe
 /package/microsoft.system.package.metadata/
 /tests/output/
 /tests/yt-dlp-invocations.log

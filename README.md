@@ -6,14 +6,15 @@ Media and subtitles are downloaded in separate passes. Missing or broken subtitl
 
 ## How activation works
 
-Windows does not pass a shared link as an ordinary command-line argument. The packaged GUI executable reads `AppInstance::GetActivatedEventArgs`, casts a `ShareTarget` activation to `ShareTargetActivatedEventArgs`, and retrieves the `DataPackageView` as `WebLink`, legacy `Uri`, or text.
+Windows does not pass a shared link as an ordinary command-line argument. When the executable receives no arguments, it first checks whether it has package identity. A packaged invocation reads `AppInstance::GetActivatedEventArgs`, casts a `ShareTarget` activation to `ShareTargetActivatedEventArgs`, and retrieves the `DataPackageView` as `WebLink`, legacy `Uri`, or text.
 
-The project deliberately builds two executables from one Rust library:
+The same `share-to-ytdlp.exe` is both the registered Share target and the console CLI:
 
-- `share-to-ytdlp-share-target.exe` is a windowless GUI-subsystem executable registered in `AppxManifest.xml`. `build.ps1` copies it into the loose package as `ShareToYtDlp.exe`.
-- `share-to-ytdlp.exe` is a normal console CLI with `--help`, `--version`, and `download <URL>`.
+- With no arguments and package identity, it handles the Windows activation. It detaches the console created for the packaged launch before opening the downloader window.
+- With CLI arguments, it supports `--help`, `--version`, and `download <URL>`.
+- With no arguments outside the package, the optional command is simply absent and the process exits successfully.
 
-Both paths launch the same `package/download.ps1` implementation. The Appx manifest controls Share registration and its displayed PNG assets; `resources/app.rc` embeds the conventional Win32 manifest and version metadata into the Rust executables.
+Both paths launch the same `package/download.ps1` implementation. The Appx manifest controls Share registration and its displayed PNG assets; `resources/app.rc` embeds the conventional Win32 manifest and version metadata into the Rust executable.
 
 ## Requirements
 
@@ -33,7 +34,7 @@ Clone the repository, then run from PowerShell:
 .\install.ps1
 ```
 
-The installer builds the Rust executables and registers the package manifest locally. The Share target is a development-mode loose package, so keep the cloned directory in place after installation.
+The installer builds the Rust executable and registers the package manifest locally. The Share target is a development-mode loose package, so keep the cloned directory in place after installation.
 
 Close and reopen an existing Share panel after installation. **Download with yt-dlp** may initially appear at the bottom of the **Share using** list.
 
