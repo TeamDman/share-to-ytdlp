@@ -4,6 +4,8 @@ A native Windows Share target and companion Rust CLI that download shared web li
 
 Media and subtitles are downloaded in separate passes. Missing or broken subtitle tracks therefore cannot turn a successful media download into a failure.
 
+If any part of a run fails, including the optional subtitle pass, the complete console transcript is saved as a timestamped `share-to-ytdlp-failure-*.log` file beside the downloads. Failure windows require three separate Enter presses before closing so an error cannot be dismissed by an accidental keystroke. Clean runs do not leave logs behind.
+
 ## How activation works
 
 Windows does not pass a shared link as an ordinary command-line argument. When the executable receives no arguments, it first checks whether it has package identity. A packaged invocation reads `AppInstance::GetActivatedEventArgs`, casts a `ShareTarget` activation to `ShareTargetActivatedEventArgs`, and retrieves the `DataPackageView` as `WebLink`, legacy `Uri`, or text.
